@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ListingAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0d0f;--surface:#16161a;--surface2:#1e1e24;--border:rgba(255,255,255,0.08);--accent:#f97316;--accent2:#fb923c;--text:#f0ece4;--muted:rgba(240,236,228,0.45);--success:#22c55e;--radius:14px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 60% at 20% 0%,rgba(249,115,22,.06) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(251,146,60,.04) 0%,transparent 50%);pointer-events:none}
+.wrapper{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 20px 80px}
+header{padding:40px 0 32px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;color:#000;font-size:16px}
+.logo-name{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;letter-spacing:-.03em}
+.logo-name span{color:var(--accent)}
+.header-badge{font-size:11px;background:rgba(249,115,22,.12);color:var(--accent);border:1px solid rgba(249,115,22,.25);padding:4px 12px;border-radius:20px;letter-spacing:.06em;font-weight:500}
+.hero{text-align:center;padding:20px 0 48px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.05;letter-spacing:-.04em;margin-bottom:16px}
+h1 em{font-style:normal;color:var(--accent)}
+.hero-sub{font-size:16px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.6}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px}
+.card-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.drop-zone{border:1.5px dashed rgba(249,115,22,.3);border-radius:10px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(249,115,22,.02);position:relative}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(249,115,22,.06)}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:36px;margin-bottom:12px}
+.drop-title{font-size:15px;font-weight:500;margin-bottom:6px}
+.drop-sub{font-size:13px;color:var(--muted)}
+.preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:16px}
+.preview-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.preview-item img{width:100%;height:100%;object-fit:cover}
+.preview-remove{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.preview-remove:hover{background:#ef4444}
+textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;resize:vertical;min-height:80px;outline:none;transition:border-color .2s}
+textarea::placeholder{color:var(--muted)}
+textarea:focus{border-color:rgba(249,115,22,.4)}
+.btn-generate{width:100%;background:var(--accent);color:#000;border:none;border-radius:10px;padding:16px;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-generate:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(249,115,22,.4)}
+.btn-generate:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.loading-wrap{text-align:center;padding:60px 20px}
+.spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-steps{display:flex;flex-direction:column;gap:8px;margin-top:24px}
+.loading-step{font-size:13px;color:var(--muted);padding:8px 16px;background:var(--surface);border-radius:6px;border:1px solid var(--border);transition:all .3s}
+.loading-step.active{color:var(--accent);border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.05)}
+.loading-step.done{color:var(--success);border-color:rgba(34,197,94,.2)}
+.results{display:none}
+.results.show{display:block}
+.section-divider{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;gap:10px;margin:32px 0 16px}
+.section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.result-grid.full{grid-template-columns:1fr}
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;transition:border-color .2s}
+.result-card:hover{border-color:rgba(249,115,22,.2)}
+.result-card-label{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.result-value{font-size:14px;line-height:1.6;color:var(--text)}
+.result-value.title-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:600}
+.result-value.big{font-size:28px;font-weight:700;font-family:'Syne',sans-serif;color:var(--accent)}
+.result-value.big2{font-size:28px;font-weight:700;font-family:'Syne',sans-serif;color:var(--accent2)}
+.badge{display:inline-block;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:500}
+.badge-safe{background:rgba(34,197,94,.12);color:var(--success);border:1px solid rgba(34,197,94,.2)}
+.badge-warn{background:rgba(249,115,22,.12);color:var(--accent);border:1px solid rgba(249,115,22,.25)}
+.badge-danger{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.copy-btn{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.copy-btn:hover{background:rgba(249,115,22,.1);color:var(--accent);border-color:rgba(249,115,22,.2)}
+.copy-btn.copied{color:var(--success);border-color:rgba(34,197,94,.2);background:rgba(34,197,94,.08)}
+.bullets-list{list-style:none}
+.bullets-list li{padding:8px 0 8px 20px;position:relative;font-size:13px;line-height:1.5;border-bottom:1px solid var(--border);color:var(--text)}
+.bullets-list li:last-child{border-bottom:none}
+.bullets-list li::before{content:'✦';position:absolute;left:0;color:var(--accent);font-size:10px;top:10px}
+.fee-table{width:100%;border-collapse:collapse;font-size:13px}
+.fee-table td{padding:7px 0;border-bottom:1px solid var(--border)}
+.fee-table td:last-child{text-align:right;font-weight:500}
+.fee-table tr.total td{font-weight:700;font-size:14px;color:var(--accent);border-top:1px solid rgba(249,115,22,.2);border-bottom:none;padding-top:10px}
+.fee-table .zero{color:var(--success)}
+.btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);padding:10px 20px;border-radius:8px;cursor:pointer;font-size:13px;margin-top:24px;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-reset:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.error-box{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:20px;text-align:center;color:#f87171;display:none;margin-top:20px}
+.error-box.show{display:block}
+@media(max-width:600px){.result-grid{grid-template-columns:1fr}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="logo">
+      <div class="logo-mark">L</div>
+      <span class="logo-name">Listing<span>AI</span></span>
+    </div>
+    <span class="header-badge">Amazon India</span>
+  </header>
+
+  <div class="hero">
+    <h1>Upload product.<br><em>Get listing ready.</em></h1>
+    <p class="hero-sub">Drop your product photos, optionally describe it, and get a complete Amazon India listing package instantly.</p>
+  </div>
+
+  <div id="upload-section">
+    <div class="card">
+      <div class="card-label">Product Images <span style="color:var(--accent);font-size:10px;margin-left:4px">UP TO 6 IMAGES</span></div>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" multiple>
+        <div class="drop-icon">📸</div>
+        <div class="drop-title">Drop product photos here</div>
+        <div class="drop-sub">or click to browse · JPG, PNG, WEBP · up to 6 images</div>
+      </div>
+      <div class="preview-grid" id="previewGrid"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Product Hint <span style="color:var(--muted);font-weight:400;font-size:10px;margin-left:4px">OPTIONAL</span></div>
+      <textarea id="productHint" placeholder="e.g. 'Cute astronaut highlighter set' or 'RC spray car with water mist' — leave blank to let AI figure it out"></textarea>
+    </div>
+    <div class="card">
+      <div class="card-label">API Key <span style="color:var(--accent);font-size:10px;margin-left:4px">REQUIRED</span></div>
+      <input type="password" id="apiKey" placeholder="Your Google Gemini API key from aistudio.google.com" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='rgba(249,115,22,.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'">
+    </div>
+    <button class="btn-generate" id="generateBtn" onclick="generate()">
+      <span>✦</span> Generate Complete Listing
+    </button>
+    <div class="error-box" id="errorBox"><div style="font-size:24px;margin-bottom:8px">⚠️</div><div id="errorMsg"></div></div>
+  </div>
+
+  <div id="loadingSection" style="display:none">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">Analysing your product...</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:6px">Gemini is reading your images</div>
+      <div class="loading-steps">
+        <div class="loading-step" id="s1">📸 Reading product images...</div>
+        <div class="loading-step" id="s2">🔍 Identifying product details...</div>
+        <div class="loading-step" id="s3">✍️ Writing title & description...</div>
+        <div class="loading-step" id="s4">🏷️ Calculating HSN, fees & compliance...</div>
+        <div class="loading-step" id="s5">✦ Finalising listing package...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="section-divider">Original Product Images</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Your Uploaded Photos <button class="copy-btn" onclick="downloadAllImages()">Download All</button></div>
+        <div id="resultImages" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Amazon Listing Images — Ready to Upload</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Auto-Generated Infographics <button class="copy-btn" onclick="downloadAllInfographics()">Download All</button></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Click any image to download individually</div>
+        <div id="infographicGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Listing Title</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Amazon Title <button class="copy-btn" onclick="copyEl('titleVal',this)">Copy</button></div>
+        <div class="result-value title-val" id="titleVal"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Descriptions</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Short Description — under 90 words <button class="copy-btn" onclick="copyEl('descVal',this)">Copy</button></div>
+        <div class="result-value" id="descVal"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Bullet Points</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">5 Feature Bullet Points <button class="copy-btn" onclick="copyBullets(this)">Copy All</button></div>
+        <ul class="bullets-list" id="bulletsVal"></ul>
+      </div>
+    </div>
+
+    <div class="section-divider">Keywords</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Backend Search Terms — under 250 chars <button class="copy-btn" onclick="copyEl('kwVal',this)">Copy</button></div>
+        <div class="result-value" id="kwVal" style="font-size:13px;color:var(--muted)"></div>
+        <div id="kwCount" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Tax & Compliance</div>
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="result-card-label">HSN Code</div>
+        <div class="result-value big" id="hsnVal"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="hsnDesc"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-label">GST Rate</div>
+        <div class="result-value big2" id="gstVal"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="gstNote"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Amazon Listing Details</div>
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="result-card-label">Category Path</div>
+        <div class="result-value" id="catVal"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-label">Dangerous Goods</div>
+        <div class="result-value" id="dgVal"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-label">Fulfillment Recommendation</div>
+        <div class="result-value" id="ffVal"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-label">GTIN / Barcode</div>
+        <div class="result-value" id="gtinVal"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Fee Estimate (Easy Ship)</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Fee Breakdown at Suggested Price</div>
+        <table class="fee-table" id="feeTable"></table>
+      </div>
+    </div>
+
+    <div class="section-divider">Compliance & Warnings</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Important Notes Before Listing</div>
+        <div class="result-value" id="warnVal" style="white-space:pre-wrap;font-size:13px"></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Photos to Click</div>
+    <div class="result-grid full">
+      <div class="result-card">
+        <div class="result-card-label">Photography Checklist</div>
+        <ul class="bullets-list" id="photoVal"></ul>
+      </div>
+    </div>
+
+    <div style="text-align:center">
+      <button class="btn-reset" onclick="reset()">← Start Over with New Product</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let files = [];
+
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('dragover');addFiles(Array.from(e.dataTransfer.files))});
+fi.addEventListener('change', ()=>addFiles(Array.from(fi.files)));
+
+function addFiles(newFiles) {
+  const imgs = newFiles.filter(f=>f.type.startsWith('image/'));
+  const space = 6 - files.length;
+  files = [...files, ...imgs.slice(0, space)];
+  renderPreviews();
+}
+
+function renderPreviews() {
+  const g = document.getElementById('previewGrid');
+  g.innerHTML = '';
+  files.forEach((f,i) => {
+    const url = URL.createObjectURL(f);
+    g.innerHTML += `<div class="preview-item"><img src="${url}"><button class="preview-remove" onclick="removeFile(${i})">×</button></div>`;
+  });
+}
+
+function removeFile(i) { files.splice(i,1); renderPreviews(); }
+
+function b64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = ()=>res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+let stepTimer;
+function startSteps() {
+  const steps = ['s1','s2','s3','s4','s5'];
+  const labels = ['Reading product images','Identifying product details','Writing title & description','Calculating HSN fees & compliance','Finalising listing package'];
+  let i = 0;
+  document.getElementById('s1').className = 'loading-step active';
+  stepTimer = setInterval(()=>{
+    if(i > 0) { const el = document.getElementById(steps[i-1]); el.className='loading-step done'; el.textContent='✓ '+labels[i-1]; }
+    if(i < steps.length) { document.getElementById(steps[i]).className='loading-step active'; i++; }
+    else clearInterval(stepTimer);
+  }, 1600);
+}
+
+async function generate() {
+  if(files.length === 0) { alert('Please upload at least one product image.'); return; }
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if(!apiKey) { alert('Please enter your Anthropic API key.'); return; }
+
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('loadingSection').style.display = 'block';
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('errorBox').classList.remove('show');
+  startSteps();
+
+  const hint = document.getElementById('productHint').value.trim();
+
+  try {
+    const imgParts = await Promise.all(files.map(async f => ({
+      inlineData: { mimeType: f.type || 'image/jpeg', data: await b64(f) }
+    })));
+
+    const sys = `You are an Amazon India listing expert for a stationery and kids novelty products business in Gurgaon. Analyse product images and return ONLY valid JSON with this exact structure — no markdown, no preamble:
+{
+  "title": "string max 200 chars",
+  "description": "string under 90 words",
+  "bullets": ["string","string","string","string","string"],
+  "keywords": "space separated string under 250 chars no commas",
+  "hsn_code": "string",
+  "hsn_description": "string",
+  "gst_rate": "string like 12%",
+  "gst_note": "string",
+  "category": "string like Office Products > Stationery > Highlighters",
+  "dangerous_goods": "Not Applicable OR Transportation (lithium battery) OR GHS",
+  "dangerous_goods_class": "safe OR warn OR danger",
+  "fulfillment": "string recommendation",
+  "gtin_note": "string",
+  "fee_rows": [
+    {"label":"Selling price (suggested MRP)","value":"₹XXX"},
+    {"label":"Referral fee","value":"₹0 (0% — under ₹1,000)","zero":true},
+    {"label":"Closing fee","value":"₹XX"},
+    {"label":"Weight handling","value":"₹XX"},
+    {"label":"Easy Ship pickup","value":"₹0","zero":true},
+    {"label":"GST on fees (18%)","value":"₹XX"},
+    {"label":"Total Amazon deduction","value":"₹XX","total":true},
+    {"label":"You receive (settlement)","value":"₹XX","settlement":true}
+  ],
+  "ip_risk": "none OR low OR high",
+  "ip_detail": "string",
+  "warnings": "string with newlines for multiple points",
+  "photo_suggestions": ["string","string","string","string","string"],
+  "made_in": "India OR China OR Unknown"
+}
+Rules: Never mention MRP in images. Never say Made in China in listing text. Flag IP (Batman, Disney, BTS, Sanrio etc). Add importer sticker note for China products. Use 2026 Amazon India fees (0% referral under ₹1000). Be accurate — only describe what you see.`;
+
+    const userPrompt = hint ? `Analyse these product images. Hint: "${hint}". Return JSON listing.` : "Analyse these product images carefully. Return complete JSON listing package.";
+
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: [{ parts: [...imgParts, { text: userPrompt }] }],
+        generationConfig: { maxOutputTokens: 4096, responseMimeType: "application/json" }
+      })
+    });
+
+    clearInterval(stepTimer);
+
+    if(!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`API ${resp.status}: ${err.slice(0,200)}`);
+    }
+
+    const data = await resp.json();
+    const raw = data.candidates[0].content.parts.map(p=>p.text||'').join('');
+    const clean = raw.replace(/```json\n?|```\n?/g,'').trim();
+    let result;
+    try { result = JSON.parse(clean); }
+    catch(e) {
+      const m = clean.match(/\{[\s\S]*\}/);
+      if(m) result = JSON.parse(m[0]);
+      else throw new Error('Could not parse AI response as JSON');
+    }
+    await showResults(result);
+  } catch(err) {
+    clearInterval(stepTimer);
+    document.getElementById('loadingSection').style.display = 'none';
+    document.getElementById('upload-section').style.display = 'block';
+    document.getElementById('errorBox').classList.add('show');
+    document.getElementById('errorMsg').textContent = err.message;
+  }
+}
+
+async function showResults(r) {
+  document.getElementById('loadingSection').style.display = 'none';
+
+  const ri = document.getElementById('resultImages');
+  ri.innerHTML = '';
+  files.forEach((f, i) => {
+    const url = URL.createObjectURL(f);
+    ri.innerHTML += `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--border);position:relative"><img src="${url}" style="width:100%;height:100%;object-fit:cover"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);padding:4px 8px;font-size:11px;color:var(--muted);text-align:center;display:flex;justify-content:space-between;align-items:center"><span>${i===0?'Main Image':'Image '+(i+1)}</span><a href="${url}" download="product_image_${i+1}.${f.name.split('.').pop()||'jpg'}" style="color:var(--accent);text-decoration:none;font-size:13px" title="Download">⬇</a></div></div>`;
+  });
+
+  // Generate infographic images
+  const productImg = await loadImg(files[0]);
+  await generateInfographics(r, productImg);
+  const ig = document.getElementById('infographicGrid');
+  ig.innerHTML = '';
+  const labels = ['Feature Highlights', 'Title & Description', 'Product Specifications', 'Why Choose This', 'Trust & Compliance'];
+  generatedInfographics.forEach((dataUrl, i) => {
+    ig.innerHTML += `<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .15s,border-color .15s" onmouseenter="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(249,115,22,.4)'" onmouseleave="this.style.transform='none';this.style.borderColor='rgba(255,255,255,0.08)'" onclick="downloadInfographic(${i})"><img src="${dataUrl}" style="width:100%;display:block"><div style="background:var(--surface2);padding:8px 12px;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text)">${labels[i] || 'Image '+(i+1)}</span><span style="color:var(--accent);font-size:11px">⬇ Download</span></div></div>`;
+  });
+
+  set('titleVal', r.title);
+  set('descVal', r.description);
+  set('kwVal', r.keywords);
+  document.getElementById('kwCount').textContent = (r.keywords||'').length + ' / 250 characters';
+  set('hsnVal', r.hsn_code);
+  set('hsnDesc', r.hsn_description);
+  set('gstVal', r.gst_rate);
+  set('gstNote', r.gst_note);
+  set('catVal', r.category);
+  set('ffVal', r.fulfillment);
+  set('gtinVal', r.gtin_note);
+
+  // Bullets
+  const bl = document.getElementById('bulletsVal');
+  bl.innerHTML = (r.bullets||[]).map(b=>`<li>${b}</li>`).join('');
+
+  // Dangerous goods
+  const dgClass = r.dangerous_goods_class === 'safe' ? 'badge-safe' : r.dangerous_goods_class === 'warn' ? 'badge-warn' : 'badge-danger';
+  document.getElementById('dgVal').innerHTML = `<span class="badge ${dgClass}">${r.dangerous_goods||'Not Applicable'}</span>`;
+
+  // Fees
+  const ft = document.getElementById('feeTable');
+  ft.innerHTML = (r.fee_rows||[]).map(row => {
+    if(row.total) return `<tr class="total"><td>Total Amazon deduction</td><td>${row.value}</td></tr>`;
+    if(row.settlement) return `<tr><td style="color:var(--success)">${row.label}</td><td style="color:var(--success);font-weight:700">${row.value}</td></tr>`;
+    return `<tr><td style="color:var(--muted)">${row.label}</td><td class="${row.zero?'zero':''}">${row.value}</td></tr>`;
+  }).join('');
+
+  // Warnings
+  let warn = r.warnings || '';
+  if(r.ip_risk === 'high') warn = '⚠️ HIGH IP RISK: ' + (r.ip_detail||'') + '\n\n' + warn;
+  else if(r.ip_risk === 'low') warn = '⚠️ ' + (r.ip_detail||'') + '\n\n' + warn;
+  if(r.made_in === 'China') warn += '\n\n✦ Indian importer name + address sticker required on each unit (Legal Metrology Act)';
+  set('warnVal', warn);
+
+  // Photos
+  const ph = document.getElementById('photoVal');
+  ph.innerHTML = (r.photo_suggestions||[]).map(p=>`<li>${p}</li>`).join('');
+
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({behavior:'smooth'});
+}
+
+function set(id, val) { document.getElementById(id).textContent = val || '—'; }
+
+function copyEl(id, btn) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='Copied!'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000);
+  });
+}
+
+function copyBullets(btn) {
+  const text = Array.from(document.querySelectorAll('#bulletsVal li')).map(li=>'• '+li.textContent).join('\n');
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy All';btn.classList.remove('copied')},2000);
+  });
+}
+
+function downloadAllImages() {
+  files.forEach((f, i) => {
+    const url = URL.createObjectURL(f);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `product_image_${i+1}.${f.name.split('.').pop()||'jpg'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+}
+
+let generatedInfographics = [];
+
+function downloadAllInfographics() {
+  generatedInfographics.forEach((dataUrl, i) => {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `listing_image_${i+1}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+}
+
+function downloadInfographic(idx) {
+  const a = document.createElement('a');
+  a.href = generatedInfographics[idx];
+  a.download = `listing_image_${idx+1}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function loadImg(file) {
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let cy = y;
+  for (const word of words) {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxWidth && line !== '') {
+      ctx.fillText(line.trim(), x, cy);
+      line = word + ' ';
+      cy += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line.trim(), x, cy);
+  return cy + lineHeight;
+}
+
+function drawRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+async function generateInfographics(r, productImg) {
+  generatedInfographics = [];
+  const S = 1500;
+
+  // === IMAGE 1: Feature Highlights ===
+  {
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const ctx = c.getContext('2d');
+    // Background
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, S, S);
+    // Product image on left
+    const imgW = S * 0.45;
+    const imgH = S * 0.7;
+    const imgX = 40;
+    const imgY = (S - imgH) / 2;
+    ctx.save();
+    drawRoundRect(ctx, imgX, imgY, imgW, imgH, 20);
+    ctx.clip();
+    const scale = Math.max(imgW / productImg.width, imgH / productImg.height);
+    const sw = productImg.width * scale;
+    const sh = productImg.height * scale;
+    ctx.drawImage(productImg, imgX + (imgW - sw)/2, imgY + (imgH - sh)/2, sw, sh);
+    ctx.restore();
+    // Title bar at top
+    ctx.fillStyle = '#FF9900';
+    drawRoundRect(ctx, 0, 0, S, 100, 0); ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 36px Arial, sans-serif';
+    ctx.fillText('KEY FEATURES', 40, 65);
+    // Bullet features on right
+    const bullets = (r.bullets || []).slice(0, 5);
+    const rx = S * 0.5 + 20;
+    let ry = 160;
+    const icons = ['✦', '✦', '✦', '✦', '✦'];
+    bullets.forEach((b, i) => {
+      // Icon circle
+      ctx.fillStyle = '#FF9900';
+      ctx.beginPath(); ctx.arc(rx + 20, ry + 8, 16, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 18px Arial'; ctx.fillText(icons[i], rx + 12, ry + 14);
+      // Text
+      ctx.fillStyle = '#232F3E';
+      ctx.font = '600 26px Arial, sans-serif';
+      ry = wrapText(ctx, b, rx + 50, ry + 16, S - rx - 80, 34);
+      ry += 30;
+    });
+    // Bottom bar
+    ctx.fillStyle = '#232F3E';
+    ctx.fillRect(0, S - 60, S, 60);
+    ctx.fillStyle = '#FF9900';
+    ctx.font = 'bold 22px Arial'; ctx.fillText('★ Premium Quality Product', 40, S - 22);
+    generatedInfographics.push(c.toDataURL('image/png'));
+  }
+
+  // === IMAGE 2: Product Title + Description Card ===
+  {
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#FAFAFA'; ctx.fillRect(0, 0, S, S);
+    // Product image centered top
+    const imgH = S * 0.55;
+    const imgW = S * 0.6;
+    const imgX = (S - imgW) / 2;
+    const imgY = 60;
+    ctx.save();
+    drawRoundRect(ctx, imgX, imgY, imgW, imgH, 24);
+    ctx.clip();
+    const scale = Math.max(imgW / productImg.width, imgH / productImg.height);
+    const sw = productImg.width * scale;
+    const sh = productImg.height * scale;
+    ctx.drawImage(productImg, imgX + (imgW - sw)/2, imgY + (imgH - sh)/2, sw, sh);
+    ctx.restore();
+    // Light border around image
+    ctx.strokeStyle = '#E0E0E0'; ctx.lineWidth = 2;
+    drawRoundRect(ctx, imgX, imgY, imgW, imgH, 24); ctx.stroke();
+    // Title area
+    const ty = imgY + imgH + 50;
+    ctx.fillStyle = '#FF9900';
+    drawRoundRect(ctx, 60, ty, S - 120, 4, 2); ctx.fill();
+    ctx.fillStyle = '#232F3E';
+    ctx.font = 'bold 34px Arial, sans-serif';
+    wrapText(ctx, r.title || '', 60, ty + 50, S - 120, 42);
+    // Description
+    ctx.fillStyle = '#555555';
+    ctx.font = '24px Arial, sans-serif';
+    const descY = ty + 160;
+    wrapText(ctx, r.description || '', 60, descY, S - 120, 32);
+    // Category badge at bottom
+    ctx.fillStyle = '#FF9900';
+    drawRoundRect(ctx, 60, S - 90, S - 120, 50, 25); ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 22px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(r.category || '', S/2, S - 58);
+    ctx.textAlign = 'left';
+    generatedInfographics.push(c.toDataURL('image/png'));
+  }
+
+  // === IMAGE 3: Specifications & Details ===
+  {
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const ctx = c.getContext('2d');
+    // Gradient background
+    const grad = ctx.createLinearGradient(0, 0, 0, S);
+    grad.addColorStop(0, '#232F3E'); grad.addColorStop(1, '#1A2332');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, S, S);
+    // Header
+    ctx.fillStyle = '#FF9900';
+    ctx.font = 'bold 42px Arial, sans-serif';
+    ctx.fillText('PRODUCT DETAILS', 60, 80);
+    ctx.fillStyle = '#FF9900'; ctx.fillRect(60, 100, 200, 4);
+    // Product image on right
+    const imgW = S * 0.4;
+    const imgH = S * 0.4;
+    const imgX = S - imgW - 60;
+    const imgY = 140;
+    ctx.save();
+    drawRoundRect(ctx, imgX, imgY, imgW, imgH, 20);
+    ctx.clip();
+    const scale = Math.max(imgW / productImg.width, imgH / productImg.height);
+    const sw = productImg.width * scale;
+    const sh = productImg.height * scale;
+    ctx.drawImage(productImg, imgX + (imgW - sw)/2, imgY + (imgH - sh)/2, sw, sh);
+    ctx.restore();
+    ctx.strokeStyle = '#FF9900'; ctx.lineWidth = 3;
+    drawRoundRect(ctx, imgX, imgY, imgW, imgH, 20); ctx.stroke();
+    // Detail rows on left
+    const details = [
+      { label: 'CATEGORY', value: r.category || '—' },
+      { label: 'HSN CODE', value: r.hsn_code || '—' },
+      { label: 'GST RATE', value: r.gst_rate || '—' },
+      { label: 'FULFILLMENT', value: r.fulfillment || '—' },
+      { label: 'DANGEROUS GOODS', value: r.dangerous_goods || 'Not Applicable' }
+    ];
+    let dy = 180;
+    const maxLabelW = S * 0.48;
+    details.forEach(d => {
+      ctx.fillStyle = '#FF9900';
+      ctx.font = 'bold 20px Arial'; ctx.fillText(d.label, 60, dy);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '26px Arial, sans-serif';
+      dy = wrapText(ctx, d.value, 60, dy + 34, maxLabelW, 30);
+      ctx.fillStyle = 'rgba(255,153,0,0.2)'; ctx.fillRect(60, dy + 5, maxLabelW, 1);
+      dy += 30;
+    });
+    // Bottom keywords section
+    const ky = S - 300;
+    ctx.fillStyle = '#FF9900';
+    ctx.font = 'bold 24px Arial'; ctx.fillText('SEARCH KEYWORDS', 60, ky);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '20px Arial, sans-serif';
+    wrapText(ctx, r.keywords || '', 60, ky + 40, S - 120, 28);
+    generatedInfographics.push(c.toDataURL('image/png'));
+  }
+
+  // === IMAGE 4: Why Choose Us / Benefits ===
+  {
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, S, S);
+    // Top accent bar
+    ctx.fillStyle = '#FF9900'; ctx.fillRect(0, 0, S, 8);
+    // Title
+    ctx.fillStyle = '#232F3E';
+    ctx.font = 'bold 44px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('WHY CHOOSE THIS PRODUCT?', S/2, 80);
+    ctx.textAlign = 'left';
+    // Product image centered
+    const imgW = S * 0.35;
+    const imgH = S * 0.35;
+    const imgX = (S - imgW) / 2;
+    const imgY = 120;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(imgX + imgW/2, imgY + imgH/2, imgW/2, 0, Math.PI*2); ctx.clip();
+    const scale = Math.max(imgW / productImg.width, imgH / productImg.height);
+    const sw = productImg.width * scale;
+    const sh = productImg.height * scale;
+    ctx.drawImage(productImg, imgX + (imgW - sw)/2, imgY + (imgH - sh)/2, sw, sh);
+    ctx.restore();
+    // Circle border
+    ctx.strokeStyle = '#FF9900'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(imgX + imgW/2, imgY + imgH/2, imgW/2, 0, Math.PI*2); ctx.stroke();
+    // 3 benefit cards at bottom
+    const bullets = (r.bullets || []).slice(0, 3);
+    const cardW = (S - 160) / 3;
+    const cardY = imgY + imgH + 80;
+    const cardH = S - cardY - 60;
+    const emojis = ['⭐', '✅', '🎯'];
+    bullets.forEach((b, i) => {
+      const cx = 40 + i * (cardW + 20);
+      // Card bg
+      ctx.fillStyle = '#FFF8F0';
+      drawRoundRect(ctx, cx, cardY, cardW, cardH, 16); ctx.fill();
+      ctx.strokeStyle = '#FFE0B2'; ctx.lineWidth = 2;
+      drawRoundRect(ctx, cx, cardY, cardW, cardH, 16); ctx.stroke();
+      // Emoji
+      ctx.font = '48px Arial'; ctx.textAlign = 'center';
+      ctx.fillText(emojis[i], cx + cardW/2, cardY + 60);
+      // Benefit number
+      ctx.fillStyle = '#FF9900'; ctx.font = 'bold 20px Arial';
+      ctx.fillText(`BENEFIT ${i+1}`, cx + cardW/2, cardY + 100);
+      // Text
+      ctx.fillStyle = '#232F3E'; ctx.font = '22px Arial, sans-serif';
+      ctx.textAlign = 'left';
+      wrapText(ctx, b, cx + 16, cardY + 135, cardW - 32, 28);
+      ctx.textAlign = 'left';
+    });
+    // Bottom bar
+    ctx.fillStyle = '#FF9900'; ctx.fillRect(0, S - 8, S, 8);
+    generatedInfographics.push(c.toDataURL('image/png'));
+  }
+
+  // === IMAGE 5: Compliance & Trust Badge ===
+  {
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#F5F5F5'; ctx.fillRect(0, 0, S, S);
+    // Header
+    ctx.fillStyle = '#232F3E';
+    drawRoundRect(ctx, 0, 0, S, 120, 0); ctx.fill();
+    ctx.fillStyle = '#FF9900'; ctx.font = 'bold 38px Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText('TRUST & COMPLIANCE', S/2, 75); ctx.textAlign = 'left';
+    // Product image small top-right
+    const imgW = 200; const imgH = 200;
+    ctx.save();
+    drawRoundRect(ctx, S - imgW - 60, 160, imgW, imgH, 16); ctx.clip();
+    const scale = Math.max(imgW / productImg.width, imgH / productImg.height);
+    const sw = productImg.width * scale;
+    const sh = productImg.height * scale;
+    ctx.drawImage(productImg, S - imgW - 60 + (imgW - sw)/2, 160 + (imgH - sh)/2, sw, sh);
+    ctx.restore();
+    // Trust items
+    const items = [
+      { icon: '📦', label: 'HSN Code', value: r.hsn_code || '—' },
+      { icon: '💰', label: 'GST Rate', value: r.gst_rate || '—' },
+      { icon: '🛡️', label: 'Dangerous Goods', value: r.dangerous_goods || 'Not Applicable' },
+      { icon: '🚚', label: 'Fulfillment', value: r.fulfillment || '—' },
+      { icon: '🏭', label: 'Made In', value: r.made_in || 'Unknown' },
+      { icon: '🏷️', label: 'GTIN', value: r.gtin_note || '—' }
+    ];
+    let iy = 180;
+    items.forEach(item => {
+      ctx.fillStyle = '#FFFFFF';
+      drawRoundRect(ctx, 40, iy, S * 0.55, 80, 12); ctx.fill();
+      ctx.strokeStyle = '#E0E0E0'; ctx.lineWidth = 1;
+      drawRoundRect(ctx, 40, iy, S * 0.55, 80, 12); ctx.stroke();
+      ctx.font = '36px Arial'; ctx.fillText(item.icon, 60, iy + 52);
+      ctx.fillStyle = '#888888'; ctx.font = 'bold 18px Arial'; ctx.fillText(item.label.toUpperCase(), 110, iy + 32);
+      ctx.fillStyle = '#232F3E'; ctx.font = '24px Arial, sans-serif'; ctx.fillText(item.value.substring(0, 40), 110, iy + 62);
+      iy += 100;
+    });
+    // Warnings at bottom
+    if (r.warnings) {
+      ctx.fillStyle = '#FFF3E0';
+      drawRoundRect(ctx, 40, S - 240, S - 80, 200, 12); ctx.fill();
+      ctx.strokeStyle = '#FF9900'; ctx.lineWidth = 2;
+      drawRoundRect(ctx, 40, S - 240, S - 80, 200, 12); ctx.stroke();
+      ctx.fillStyle = '#E65100'; ctx.font = 'bold 22px Arial'; ctx.fillText('⚠️  IMPORTANT NOTES', 70, S - 200);
+      ctx.fillStyle = '#555555'; ctx.font = '20px Arial, sans-serif';
+      wrapText(ctx, (r.warnings || '').replace(/\n/g, ' ').substring(0, 200), 70, S - 165, S - 160, 26);
+    }
+    generatedInfographics.push(c.toDataURL('image/png'));
+  }
+}
+
+function reset() {
+  files = [];
+  document.getElementById('previewGrid').innerHTML = '';
+  document.getElementById('productHint').value = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('errorBox').classList.remove('show');
+  document.getElementById('upload-section').style.display = 'block';
+  ['s1','s2','s3','s4','s5'].forEach((id,i)=>{
+    const el = document.getElementById(id);
+    el.className = 'loading-step';
+    el.textContent = ['📸 Reading product images...','🔍 Identifying product details...','✍️ Writing title & description...','🏷️ Calculating HSN, fees & compliance...','✦ Finalising listing package...'][i];
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
